@@ -91,7 +91,7 @@ export function initForm(audio) {
 }
 
 /* ── 3D-anchored callouts (hygiene section) ──
-   Returns an updater the render loop calls each frame. */
+   Returns an updater the render loop calls each frame. Zero per-frame allocations. */
 export function makeCalloutUpdater(camera, anchors) {
   const els = {
     chin: document.getElementById('co-chin'),
@@ -99,26 +99,94 @@ export function makeCalloutUpdater(camera, anchors) {
     cavity: document.getElementById('co-cavity'),
   };
   els.forehead.classList.add('flip');
-  const v = { x: 0, y: 0, z: 0 };
-  let visible = 0; // driven by cinema.js (0..1)
+  const KEYS = Object.keys(els);
+  const scratch = anchors.chin.position.clone(); // reusable Vector3
+  let visible = 0;   // driven by cinema.js (0..1)
+  let wasHidden = false;
 
   const update = () => {
+    if (visible === 0) {
+      if (!wasHidden) {
+        for (const key of KEYS) els[key].style.opacity = 0;
+        wasHidden = true;
+      }
+      return;
+    }
+    wasHidden = false;
     const w = window.innerWidth, h = window.innerHeight;
-    for (const key of Object.keys(els)) {
+    for (const key of KEYS) {
       const el = els[key];
-      const a = anchors[key];
-      a.getWorldPosition(a._wp || (a._wp = new (a.position.constructor)()));
-      const p = a._wp.clone().project(camera);
-      const behind = p.z > 1;
-      v.x = (p.x * 0.5 + 0.5) * w;
-      v.y = (-p.y * 0.5 + 0.5) * h;
-      const off = behind || v.x < 0 || v.x > w || v.y < 0 || v.y > h;
-      el.style.transform = `translate(${v.x.toFixed(1)}px, ${v.y.toFixed(1)}px)`;
+      anchors[key].getWorldPosition(scratch);
+      scratch.project(camera);
+      const behind = scratch.z > 1;
+      const x = (scratch.x * 0.5 + 0.5) * w;
+      const y = (-scratch.y * 0.5 + 0.5) * h;
+      const off = behind || x < 0 || x > w || y < 0 || y > h;
+      el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
       el.style.opacity = off ? 0 : visible;
     }
   };
   update.setVisible = (o) => { visible = o; };
   return update;
+}
+
+/* ── trailing focus-frame cursor (desktop only) ── */
+export function initCursor() {
+  if (!matchMedia('(pointer: fine)').matches) return;
+  const c = document.getElementById('cursor');
+  if (!c || !window.gsap) return;
+  let x = innerWidth / 2, y = innerHeight / 2, tx = x, ty = y;
+  addEventListener('pointermove', (e) => {
+    tx = e.clientX; ty = e.clientY;
+    c.classList.add('is-on');
+  }, { passive: true });
+  const hoverables = 'a, button, input, select, .mode, .stat';
+  document.addEventListener('pointerover', (e) => {
+    c.classList.toggle('is-hover', !!(e.target.closest && e.target.closest(hoverables)));
+  });
+  gsap.ticker.add(() => {
+    x += (tx - x) * 0.2;
+    y += (ty - y) * 0.2;
+    c.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+  });
+}
+
+/* ── magnetic pull on primary CTAs (desktop only) ── */
+export function initMagnetic() {
+  if (!matchMedia('(pointer: fine)').matches) return;
+  document.querySelectorAll('.chrome-cta, .submit-btn, .begin-btn').forEach((el) => {
+    el.addEventListener('pointermove', (e) => {
+      const r = el.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width / 2);
+      const dy = e.clientY - (r.top + r.height / 2);
+      el.style.transform = `translate(${(dx * 0.12).toFixed(1)}px, ${(dy * 0.22).toFixed(1)}px)`;
+    });
+    el.addEventListener('pointerleave', () => { el.style.transform = ''; });
+  });
+}
+
+/* ── live scan counter on the dashboard ── */
+export function initScanFeed() {
+  const el = document.getElementById('scan-count');
+  if (!el) return;
+  let n = 847;
+  setInterval(() => {
+    n += 1 + Math.floor(Math.random() * 3);
+    el.textContent = String(n).padStart(4, '0');
+  }, 4200);
+}
+
+/* ── smooth in-page anchors: instant jumps corrupt scrubbed timelines ── */
+export function initAnchors() {
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('a[href^="#"]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (!target) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth' });
+    });
+  });
 }
 
 /* rail progress + section index */

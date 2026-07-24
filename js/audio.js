@@ -8,7 +8,8 @@ export class AudioEngine {
   constructor() {
     this.ctx = null;
     this.master = null;
-    this.muted = localStorage.getItem('cs-muted') === '1';
+    // storage can throw in privacy modes / in-app browsers — never let it brick the page
+    try { this.muted = localStorage.getItem('cs-muted') === '1'; } catch { this.muted = false; }
     this.started = false;
   }
 
@@ -22,8 +23,20 @@ export class AudioEngine {
     this.master.gain.value = 0;
     this.master.connect(this.ctx.destination);
     this.started = true;
+    this._resume();
+    // iOS suspends/interrupts the context on app-switch or lock — recover on return
+    this.ctx.onstatechange = () => this._resume();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') this._resume();
+    });
     this._ambient();
     if (!this.muted) this._ramp(0.85, 2.5);
+  }
+
+  _resume() {
+    if (this.ctx && this.ctx.state !== 'running' && !this.muted) {
+      this.ctx.resume().catch(() => {});
+    }
   }
 
   _ramp(v, t) {
@@ -35,8 +48,11 @@ export class AudioEngine {
 
   setMuted(m) {
     this.muted = m;
-    localStorage.setItem('cs-muted', m ? '1' : '0');
-    if (this.started) this._ramp(m ? 0 : 0.85, 0.6);
+    try { localStorage.setItem('cs-muted', m ? '1' : '0'); } catch {}
+    if (this.started) {
+      if (!m) this._resume();
+      this._ramp(m ? 0 : 0.85, 0.6);
+    }
   }
 
   _noiseBuffer(seconds = 2) {
@@ -103,6 +119,7 @@ export class AudioEngine {
   /* magnetic N52 snap — heavy, satisfying */
   thud() {
     if (!this.started || this.muted) return;
+    this._resume();
     const c = this.ctx;
     const o = c.createOscillator();
     o.type = 'sine';
@@ -127,6 +144,7 @@ export class AudioEngine {
   /* cinematic light-mode transition */
   whoosh() {
     if (!this.started || this.muted) return;
+    this._resume();
     const c = this.ctx;
     const n = c.createBufferSource();
     n.buffer = this._noiseBuffer(1);
@@ -145,6 +163,7 @@ export class AudioEngine {
   /* clinical shutter — two crisp ticks */
   shutter() {
     if (!this.started || this.muted) return;
+    this._resume();
     const c = this.ctx;
     [0, 0.055].forEach((dt, i) => {
       const n = c.createBufferSource();
@@ -165,6 +184,7 @@ export class AudioEngine {
   /* 365nm ignition shimmer */
   uvShimmer() {
     if (!this.started || this.muted) return;
+    this._resume();
     const c = this.ctx;
     [6400, 8300].forEach((f, i) => {
       const o = c.createOscillator();
@@ -182,6 +202,7 @@ export class AudioEngine {
   /* micro hover blip */
   blip() {
     if (!this.started || this.muted) return;
+    this._resume();
     const c = this.ctx;
     const o = c.createOscillator();
     o.type = 'sine';

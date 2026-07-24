@@ -12,7 +12,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildCapsule } from './capsule.js';
 import { AudioEngine } from './audio.js';
 import { initCinematography } from './cinema.js';
-import { initLoader, initSoundToggle, initMicroSounds, initForm, makeCalloutUpdater, initRail } from './ui.js';
+import { initLoader, initSoundToggle, initMicroSounds, initForm, makeCalloutUpdater, initRail, initCursor, initMagnetic, initScanFeed, initAnchors } from './ui.js';
 
 const audio = new AudioEngine();
 let renderer = null;
@@ -36,6 +36,10 @@ if (!renderer) {
   initSoundToggle(audio);
   initForm(audio);
   initRail();
+  initCursor();
+  initMagnetic();
+  initScanFeed();
+  initAnchors();
 } else {
   boot();
 }
@@ -43,6 +47,7 @@ if (!renderer) {
 function boot() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.92;
+  renderer.transmissionResolutionScale = 0.5; // jade refraction reads identically at half res
 
   const scene = new THREE.Scene();
   scene.fog = new THREE.FogExp2(0x050505, 0.045);
@@ -59,37 +64,73 @@ function boot() {
   scene.add(capsule.lights.rim, capsule.lights.rimTarget, capsule.lights.fill, capsule.lights.backGlow);
   scene.add(new THREE.AmbientLight(0xffffff, 0.06));
 
+  /* -- bio-motes: dust-of-light drifting through the void -- */
+  const isCoarsePre = matchMedia('(pointer: coarse)').matches;
+  const MOTES = isCoarsePre ? 320 : 560;
+  const pGeo = new THREE.BufferGeometry();
+  const mPos = new Float32Array(MOTES * 3);
+  const mCol = new Float32Array(MOTES * 3);
+  const mSpeed = new Float32Array(MOTES);
+  const palette = [new THREE.Color(0xdfe2ea), new THREE.Color(0xcda9f0), new THREE.Color(0x9fe8ff)];
+  for (let i = 0; i < MOTES; i++) {
+    mPos[i * 3] = (Math.random() - 0.5) * 9;
+    mPos[i * 3 + 1] = (Math.random() - 0.5) * 6;
+    mPos[i * 3 + 2] = (Math.random() - 0.5) * 7 - 0.5;
+    const r = Math.random();
+    const c = r < 0.62 ? palette[0] : r < 0.86 ? palette[1] : palette[2];
+    mCol[i * 3] = c.r; mCol[i * 3 + 1] = c.g; mCol[i * 3 + 2] = c.b;
+    mSpeed[i] = 0.018 + Math.random() * 0.05;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(mPos, 3));
+  pGeo.setAttribute('color', new THREE.BufferAttribute(mCol, 3));
+  const motes = new THREE.Points(pGeo, new THREE.PointsMaterial({
+    size: 0.02, vertexColors: true, transparent: true, opacity: 0.5,
+    blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true,
+  }));
+  scene.add(motes);
+
   /* ── post pipeline (single pass instances, tier-assembled) ── */
   const renderPass = new RenderPass(scene, camera);
   const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.5, 0.5, 1.45);
   const bokehPass = new BokehPass(scene, camera, { focus: 3.2, aperture: 0.00016, maxblur: 0.0075 });
   const outputPass = new OutputPass();
   const smaaPass = new SMAAPass(innerWidth, innerHeight);
-  let composer = null;
 
   const isCoarse = matchMedia('(pointer: coarse)').matches;
   let tier = isCoarse ? 'MID' : 'HIGH';
-  const TIER_DPR = { HIGH: Math.min(devicePixelRatio, 2), MID: Math.min(devicePixelRatio, 1.6), LOW: 1 };
+  const TIER_DPR = { HIGH: Math.min(devicePixelRatio, 1.6), MID: Math.min(devicePixelRatio, 1.4), LOW: 1 };
 
-  function assemble() {
+  // one composer for life — tiers only toggle passes (no target reallocation, no leaks)
+  const composer = new EffectComposer(renderer);
+  composer.addPass(renderPass);
+  composer.addPass(bokehPass);
+  composer.addPass(bloomPass);
+  composer.addPass(outputPass);
+  composer.addPass(smaaPass);
+
+  function applyTier() {
     renderer.setPixelRatio(TIER_DPR[tier]);
     renderer.setSize(innerWidth, innerHeight);
-    composer = new EffectComposer(renderer);
-    composer.addPass(renderPass);
-    if (tier === 'HIGH') composer.addPass(bokehPass);
-    composer.addPass(bloomPass);
-    composer.addPass(outputPass);
-    if (tier !== 'LOW') composer.addPass(smaaPass);
+    bokehPass.enabled = tier === 'HIGH';
+    smaaPass.enabled = tier !== 'LOW';
     composer.setSize(innerWidth, innerHeight);
     capsule.setTier(tier);
   }
-  assemble();
+  applyTier();
 
+  // mobile URL-bar collapse fires height-only resizes constantly — ignore those
+  let lastW = innerWidth;
+  let resizeT = 0;
   addEventListener('resize', () => {
-    camera.aspect = innerWidth / innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-    composer.setSize(innerWidth, innerHeight);
+    if (isCoarse && innerWidth === lastW) return;
+    clearTimeout(resizeT);
+    resizeT = setTimeout(() => {
+      lastW = innerWidth;
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+      composer.setSize(innerWidth, innerHeight);
+    }, 250);
   });
 
   /* ── camera state, scrubbed by cinema.js ── */
@@ -116,16 +157,22 @@ function boot() {
   initMicroSounds(audio);
   initForm(audio);
   initRail();
+  initCursor();
+  initMagnetic();
+  initScanFeed();
+  initAnchors();
 
-  /* ── adaptive quality: degrade before it ever stutters ── */
-  let frames = 0, acc = 0;
+  /* ── adaptive quality: degrade before it ever stutters ──
+     baseline-aware so a Low-Power-Mode 30Hz rAF cap isn't mistaken for GPU overload */
+  let frames = 0, acc = 0, baselineFPS = 0;
   function sampleFPS(dt) {
     frames++; acc += dt;
     if (frames >= 50) {
       const fps = frames / acc;
-      if (fps < 45 && tier !== 'LOW') {
+      baselineFPS = Math.max(baselineFPS, fps);
+      if (fps < 45 && fps < baselineFPS * 0.75 && tier !== 'LOW') {
         tier = tier === 'HIGH' ? 'MID' : 'LOW';
-        assemble();
+        applyTier();
       }
       frames = 0; acc = 0;
     }
@@ -151,11 +198,21 @@ function boot() {
     camera.lookAt(target);
 
     scene.environmentIntensity = state.env;
+    scene.environmentRotation.y = t * 0.03;   // reflections slowly alive on the clearcoat
 
     // massive machine, faint breath of life
     capsule.group.rotation.y = state.rotY + Math.sin(t * 0.22) * 0.018;
     capsule.group.position.x = state.grpX;
     capsule.group.position.y = Math.sin(t * 0.5) * 0.006;
+    capsule.animate(t);
+
+    // motes drift upward and wrap
+    for (let i = 0; i < MOTES; i++) {
+      mPos[i * 3 + 1] += mSpeed[i] * dt;
+      if (mPos[i * 3 + 1] > 3) mPos[i * 3 + 1] = -3;
+    }
+    pGeo.attributes.position.needsUpdate = true;
+    motes.rotation.y = t * 0.012;
 
     if (tier === 'HIGH') {
       bokehPass.uniforms.focus.value = camera.position.distanceTo(target);

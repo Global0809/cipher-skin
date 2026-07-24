@@ -172,6 +172,22 @@ export function buildCapsule() {
   camGlass.position.set(0, 0, -0.502);
   group.add(camGlass);
 
+  // -- living details: idle scan beam + breathing lens pupil --
+  const scanMat = new THREE.MeshStandardMaterial({
+    color: 0x061014, emissive: 0x8fe4ff, emissiveIntensity: 0,
+    roughness: 0.4, transparent: true, opacity: 0.9,
+  });
+  const scanBeam = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.008, 0.012), scanMat);
+  scanBeam.position.set(0, 0, -0.12);
+  group.add(scanBeam);
+
+  const pupilMat = new THREE.MeshStandardMaterial({
+    color: 0x140a20, emissive: 0xcda9f0, emissiveIntensity: 1.0, roughness: 0.3,
+  });
+  const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.011, 20), pupilMat);
+  pupil.position.set(0, 0, -0.4935);
+  group.add(pupil);
+
   // ── Cryo-magnetic jade bio-interfaces ──
   const bowlPts = [
     new THREE.Vector2(0.001, 0), new THREE.Vector2(0.07, 0.004), new THREE.Vector2(0.115, 0.018),
@@ -208,7 +224,7 @@ export function buildCapsule() {
   const rimTarget = new THREE.Object3D();
   rim.target = rimTarget;
 
-  const fill = new THREE.DirectionalLight(0xbfd0e8, 0.28);
+  const fill = new THREE.DirectionalLight(0xbfd0e8, 0.17);
   fill.position.set(-2.4, 0.6, 1.8);
 
   const backGlow = new THREE.PointLight(0x9b4dff, 0, 9, 1.6);
@@ -228,6 +244,18 @@ export function buildCapsule() {
     anchors,
     mats: { pearl, voidBlack, jade, visHaloMat, polHaloMat, uvBarMat },
     lights: { visLight, polLight, uvLight, rim, rimTarget, fill, backGlow },
+    /* per-frame life: the machine idles like it's quietly scanning */
+    animate(t) {
+      const cycle = (t % 5.6) / 5.6;
+      let sweep = 0;
+      if (cycle < 0.42) sweep = cycle / 0.42;
+      else if (cycle < 0.5) sweep = 1;
+      else if (cycle < 0.92) sweep = 1 - (cycle - 0.5) / 0.42;
+      const eased = sweep * sweep * (3 - 2 * sweep);
+      scanBeam.position.y = -0.52 + eased * 1.04;
+      scanMat.emissiveIntensity = cycle < 0.92 ? 1.9 : 0;
+      pupilMat.emissiveIntensity = 0.85 + 0.55 * (0.5 + 0.5 * Math.sin(t * 1.6));
+    },
     setTier(tier) {
       // LOW: kill refraction + iridescence (biggest shader cost), MID/HIGH: full pearl
       if (tier === 'LOW') {
