@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>cipher.skin — Clarisse Mark II · AI Skin Diagnostics for Elite Salon Chains</title>
+  <meta name="description" content="Clarisse Mark II — the medical-grade AI skin diagnostic capsule for premium salon chains. Tri-spectral imaging, built-in CRM, and an average ₹2–3L/month in added upsell revenue.">
+  <meta name="theme-color" content="#050505">
+  <meta property="og:title" content="cipher.skin — Clarisse Mark II">
+  <meta property="og:description" content="See the Unseen. Scale the Untapped. The AI skin diagnostic engine transforming elite salons.">
+  <meta property="og:image" content="https://global0809.github.io/cipher-skin/assets/og.jpg">
+  <meta property="og:url" content="https://global0809.github.io/cipher-skin/">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+  <link rel="preload" href="fonts/space-grotesk-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/manrope-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/build/three.module.min.js",
+      "three/addons/": "./vendor/three/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body class="is-locked">
+
+  <canvas id="scene" aria-hidden="true"></canvas>
+  <div id="tint" aria-hidden="true"></div>
+  <div id="vignette" aria-hidden="true"></div>
+  <div id="grain" aria-hidden="true"></div>
+
+  <!-- ══════════ LOADER ══════════ -->
+  <div id="loader" role="dialog" aria-label="Loading">
+    <div class="loader-mark" aria-hidden="true">
+      <svg viewBox="0 0 64 64" class="mark-svg">
+        <g class="mark-frame" stroke-linecap="round" fill="none">
+          <path d="M14 24 v-6 a4 4 0 0 1 4-4 h6"/>
+          <path d="M50 24 v-6 a4 4 0 0 0 -4-4 h-6"/>
+          <path d="M14 40 v6 a4 4 0 0 0 4 4 h6"/>
+          <path d="M50 40 v6 a4 4 0 0 1 -4 4 h-6"/>
+        </g>
+        <circle class="mark-dot" cx="32" cy="32" r="8"/>
+      </svg>
+    </div>
+    <div class="loader-word">cipher<span>.</span>skin</div>
+    <div class="loader-sub">DECODING YOUR SKIN</div>
+    <div class="loader-bar"><div class="loader-fill" id="loader-fill"></div></div>
+    <div class="loader-status mono" id="loader-status">CALIBRATING OPTICS</div>
+    <button id="begin-btn" class="begin-btn" disabled>
+      <span class="begin-label">BEGIN THE SCAN</span>
+      <span class="begin-ring" aria-hidden="true"></span>
+    </button>
+  </div>
+
+  <!-- ══════════ FIXED CHROME ══════════ -->
+  <header id="chrome" aria-label="Site header">
+    <a class="brand" href="#hero" aria-label="cipher.skin home">
+      <svg viewBox="0 0 64 64" class="brand-mark" aria-hidden="true">
+        <g class="mark-frame" stroke-linecap="round" fill="none">
+          <path d="M14 24 v-6 a4 4 0 0 1 4-4 h6"/>
+          <path d="M50 24 v-6 a4 4 0 0 0 -4-4 h-6"/>
+          <path d="M14 40 v6 a4 4 0 0 0 4 4 h6"/>
+          <path d="M50 40 v6 a4 4 0 0 1 -4 4 h-6"/>
+        </g>
+        <circle class="mark-dot" cx="32" cy="32" r="8"/>
+      </svg>
+      <span class="brand-word">cipher<i>.</i>skin</span>
+    </a>
+    <div class="chrome-right">
+      <button id="sound-toggle" class="sound-toggle" aria-label="Toggle sound" aria-pressed="false">
+        <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      </button>
+      <a href="#partner" class="chrome-cta">SECURE A DEMO</a>
+    </div>
+  </header>
+
+  <div id="rail" aria-hidden="true">
+    <div class="rail-index mono"><span id="rail-current">01</span><em>/</em>06</div>
+    <div class="rail-track"><div class="rail-fill" id="rail-fill"></div></div>
+  </div>
+
+  <!-- ══════════ CONTENT ══════════ -->
+  <main id="content">
+
+    <!-- 1 · HERO -->
+    <section id="hero" class="section" data-index="01">
+      <div class="sticky">
+        <div class="copy copy-center">
+          <div class="eyebrow mono reveal">CIPHER.SKIN · CLINICAL AI DIAGNOSTICS</div>
+          <h1 class="hero-h1">
+            <span class="line reveal">See the Unseen.</span>
+            <span class="line line-accent reveal">Scale the Untapped.</span>
+          </h1>
+          <p class="hero-sub reveal">Clarisse Mark II — the AI skin diagnostic capsule<br class="br-desk"> engineered for India's elite salon chains.</p>
+        </div>
+        <div class="scroll-cue" aria-hidden="true">
+          <span class="mono">EXPERIENCE THE HARDWARE</span>
+          <span class="cue-line"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2 · INDUSTRIAL DESIGN -->
+    <section id="design" class="section" data-index="02">
+      <div class="sticky">
+        <div class="copy copy-left">
+          <div class="eyebrow mono">01 · INDUSTRIAL DESIGN</div>
+          <h2>Designed for the<br>Modern Clinic.</h2>
+          <p>A seamless pearl-white monocoque, finished to automotive standards. Clarisse doesn't sit in the corner of your salon — it becomes the centrepiece your clients photograph.</p>
+          <ul class="chips mono">
+            <li>PEARL CLEARCOAT SHELL</li>
+            <li>ZERO VISIBLE FASTENERS</li>
+            <li>LIGHT-SEALED CAVITY</li>
+            <li>360° SWIVEL BASE</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · HYGIENE -->
+    <section id="hygiene" class="section" data-index="03">
+      <div class="sticky">
+        <div class="copy copy-right">
+          <div class="eyebrow mono">02 · CLINICAL HYGIENE</div>
+          <h2>Uncompromising<br>Purity.</h2>
+          <p>No foams. No fabrics. Nothing porous. Every contact point is solid white jade — icy-cool, deeply calming, and released by a magnetic snap for full sanitisation between every single scan.</p>
+          <ul class="chips mono">
+            <li>N52 MAGNETIC ARRAY</li>
+            <li>70% IPA SAFE</li>
+            <li>CRYO-TACTILE COMFORT</li>
+          </ul>
+        </div>
+        <div class="callout" id="co-chin"><span class="co-dot"></span><span class="co-line"></span><span class="co-label mono">SOLID WHITE JADE</span></div>
+        <div class="callout" id="co-forehead"><span class="co-dot"></span><span class="co-line"></span><span class="co-label mono">MAGNETIC SNAP-FIT</span></div>
+        <div class="callout" id="co-cavity"><span class="co-dot"></span><span class="co-line"></span><span class="co-label mono">SANITIZABLE IN SECONDS</span></div>
+      </div>
+    </section>
+
+    <!-- 4 · TRI-SPECTRAL OPTICS -->
+    <section id="optics" class="section" data-index="04">
+      <div class="sticky">
+        <div class="copy copy-left copy-optics">
+          <div class="eyebrow mono">03 · TRI-SPECTRAL IMAGING</div>
+          <h2>Medical-Grade Optics.<br>Zero Guesswork.</h2>
+          <p>Three calibrated light regimes interrogate the skin far beyond what mirrors — or human eyes — can resolve.</p>
+        </div>
+        <div class="modes">
+          <div class="mode" id="mode-vis">
+            <div class="mode-head mono"><span class="mode-key">VIS</span><span class="mode-tag">SURFACE</span></div>
+            <p>Pure 6500K white light maps pores, texture and fine lines in true colour.</p>
+          </div>
+          <div class="mode" id="mode-pol">
+            <div class="mode-head mono"><span class="mode-key">POL</span><span class="mode-tag">SUBSURFACE</span></div>
+            <p>Cross-polarised light cancels glare to expose vascularity, inflammation and deep pigment.</p>
+          </div>
+          <div class="mode" id="mode-uv">
+            <div class="mode-head mono"><span class="mode-key">UV</span><span class="mode-tag">365NM</span></div>
+            <p>True 365-nanometre ultraviolet reveals bacterial activity and sun damage before it surfaces.</p>
+          </div>
+        </div>
+        <ul class="chips mono chips-optics">
+          <li>8MP LOCKED-FOCUS OPTICS</li>
+          <li>CALIBRATED 6500K</li>
+          <li>TRUE 365NM EMITTERS</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 5 · REVENUE ENGINE -->
+    <section id="revenue" class="section" data-index="05">
+      <div class="sticky">
+        <div class="copy copy-left copy-revenue">
+          <div class="eyebrow mono">04 · THE REVENUE ENGINE</div>
+          <h2>Your Highest-Performing<br>Employee.</h2>
+          <p>Every scan ends with an objective, AI-prescribed treatment plan — turning honest data into high-ticket facial and serum conversions, automatically.</p>
+        </div>
+
+        <div class="dash" aria-hidden="true">
+          <div class="dash-panel glass">
+            <div class="dash-top mono"><span>CLARISSE · LIVE ANALYSIS</span><span class="dash-live"><i></i>SCAN 0847</span></div>
+            <div class="dash-body">
+              <div class="dash-score">
+                <svg viewBox="0 0 120 120" class="score-ring">
+                  <circle cx="60" cy="60" r="52" class="ring-bg"/>
+                  <circle cx="60" cy="60" r="52" class="ring-fg" id="ring-fg"/>
+                </svg>
+                <div class="score-num"><b id="score-num">78</b><span class="mono">SKIN SCORE</span></div>
+              </div>
+              <div class="dash-metrics mono">
+                <div class="dm"><span>HYDRATION</span><div class="dm-bar"><i style="--w:64%"></i></div></div>
+                <div class="dm"><span>TEXTURE</span><div class="dm-bar"><i style="--w:71%"></i></div></div>
+                <div class="dm"><span>PIGMENT</span><div class="dm-bar"><i style="--w:48%"></i></div></div>
+                <div class="dm"><span>VASCULARITY</span><div class="dm-bar"><i style="--w:56%"></i></div></div>
+              </div>
+            </div>
+            <div class="dash-rec">
+              <div class="mono dash-rec-head">RECOMMENDED PROTOCOL</div>
+              <div class="dash-rec-item"><span>Hydra-Restore Facial · 6-week course</span><em class="mono">BOOK</em></div>
+              <div class="dash-rec-item"><span>Vitamin-C Brightening Serum</span><em class="mono">ADD</em></div>
+              <div class="dash-rec-item"><span>Rebook reminder · 21 days</span><em class="mono">AUTO</em></div>
+            </div>
+          </div>
+
+          <div class="stat-cards">
+            <div class="stat glass stat-money">
+              <div class="stat-big">₹2–3L<span>/month</span></div>
+              <p>average added revenue across partner salons</p>
+            </div>
+            <div class="stat glass">
+              <div class="stat-head mono">CRM BUILT-IN</div>
+              <p>Client skin history, visit cadence and rebooking nudges — one dashboard.</p>
+            </div>
+            <div class="stat glass">
+              <div class="stat-head mono">UPSELL ON PROOF</div>
+              <p>Clients watch their own skin data improve. Retention becomes automatic.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · PARTNERSHIP -->
+    <section id="partner" class="section section-partner" data-index="06">
+      <div class="partner-wrap">
+        <div class="copy copy-center">
+          <div class="eyebrow mono">05 · EXCLUSIVE PARTNERSHIP</div>
+          <h2>Elevate Your Chain.</h2>
+          <p class="partner-sub">Clarisse Mark II is placed exclusively with premium salon chains.<br class="br-desk"> Trusted by India's leading names in beauty. Applications reviewed weekly.</p>
+        </div>
+        <form id="lead-form" class="lead-form glass" novalidate>
+          <div class="ff">
+            <label class="mono" for="f-name">YOUR NAME</label>
+            <input id="f-name" name="name" type="text" autocomplete="name" required placeholder="Full name">
+          </div>
+          <div class="ff">
+            <label class="mono" for="f-brand">SALON BRAND</label>
+            <input id="f-brand" name="brand" type="text" autocomplete="organization" required placeholder="Brand / chain name">
+          </div>
+          <div class="ff">
+            <label class="mono" for="f-locations">LOCATIONS</label>
+            <select id="f-locations" name="locations" required>
+              <option value="" disabled selected>Select</option>
+              <option>1</option>
+              <option>2–5</option>
+              <option>6–15</option>
+              <option>15+</option>
+            </select>
+          </div>
+          <div class="ff">
+            <label class="mono" for="f-contact">PHONE / EMAIL</label>
+            <input id="f-contact" name="contact" type="text" autocomplete="tel" required placeholder="+91 ·····">
+          </div>
+          <button type="submit" class="submit-btn"><span>SECURE A DEMO UNIT</span></button>
+          <div class="form-alt">or write to <a href="mailto:cipher.skin@gmail.com?subject=Demo%20Unit%20Request%20%E2%80%94%20Clarisse%20Mark%20II">cipher.skin@gmail.com</a></div>
+          <div class="form-note mono">RESPONSE WITHIN 24 HOURS · DELHI NCR</div>
+        </form>
+      </div>
+
+      <footer id="footer">
+        <div class="foot-brand">
+          <svg viewBox="0 0 64 64" class="brand-mark" aria-hidden="true">
+            <g class="mark-frame" stroke-linecap="round" fill="none">
+              <path d="M14 24 v-6 a4 4 0 0 1 4-4 h6"/>
+              <path d="M50 24 v-6 a4 4 0 0 0 -4-4 h-6"/>
+              <path d="M14 40 v6 a4 4 0 0 0 4 4 h6"/>
+              <path d="M50 40 v6 a4 4 0 0 1 -4 4 h-6"/>
+            </g>
+            <circle class="mark-dot" cx="32" cy="32" r="8"/>
+          </svg>
+          <span>cipher<i>.</i>skin</span>
+        </div>
+        <div class="foot-tag mono">DECODING YOUR SKIN</div>
+        <div class="foot-links">
+          <a href="https://wa.me/918448506089" target="_blank" rel="noopener">WHATSAPP</a>
+          <a href="mailto:cipher.skin@gmail.com">EMAIL</a>
+        </div>
+        <div class="foot-copy mono">© 2026 CIPHER.SKIN · MADE FOR THE PIONEERS OF INDIAN BEAUTY</div>
+      </footer>
+    </section>
+
+  </main>
+
+  <div id="webgl-fallback" hidden>
+    <p>Your browser can't render the 3D experience — but the machine is real, and the numbers are too.</p>
+    <a href="#partner">Secure a demo unit →</a>
+  </div>
+
+  <script src="vendor/gsap/gsap.min.js"></script>
+  <script src="vendor/gsap/ScrollTrigger.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
