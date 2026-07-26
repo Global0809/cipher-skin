@@ -8,9 +8,12 @@ export class AudioEngine {
   constructor() {
     this.ctx = null;
     this.master = null;
+    this.assemblyBus = null;
     // storage can throw in privacy modes / in-app browsers — never let it brick the page
     try { this.muted = localStorage.getItem('cs-muted') === '1'; } catch { this.muted = false; }
     this.started = false;
+    this._assemblyNoise = null;
+    this._lastAssemblyFinal = -Infinity;
   }
 
   /* Must be called from a user gesture (BEGIN button). */
@@ -22,7 +25,17 @@ export class AudioEngine {
     this.master = this.ctx.createGain();
     this.master.gain.value = 0;
     this.master.connect(this.ctx.destination);
+    this.assemblyBus = this.ctx.createGain();
+    this.assemblyBus.gain.value = 0.78;
+    const assemblyLimiter = this.ctx.createDynamicsCompressor();
+    assemblyLimiter.threshold.value = -20;
+    assemblyLimiter.knee.value = 8;
+    assemblyLimiter.ratio.value = 5;
+    assemblyLimiter.attack.value = 0.004;
+    assemblyLimiter.release.value = 0.12;
+    this.assemblyBus.connect(assemblyLimiter).connect(this.master);
     this.started = true;
+    this._assemblyNoise = this._noiseBuffer(0.18);
     this._resume();
     // iOS suspends/interrupts the context on app-switch or lock — recover on return
     this.ctx.onstatechange = () => this._resume();
@@ -108,12 +121,73 @@ export class AudioEngine {
     hiss.start();
   }
 
-  _env(gainNode, peak, attack, decay) {
-    const now = this.ctx.currentTime;
-    gainNode.gain.cancelScheduledValues(now);
-    gainNode.gain.setValueAtTime(0.0001, now);
-    gainNode.gain.exponentialRampToValueAtTime(peak, now + attack);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + attack + decay);
+  _env(gainNode, peak, attack, decay, at = this.ctx.currentTime) {
+    gainNode.gain.cancelScheduledValues(at);
+    gainNode.gain.setValueAtTime(0.0001, at);
+    gainNode.gain.exponentialRampToValueAtTime(peak, at + attack);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, at + attack + decay);
+  }
+
+  /* restrained magnetic/glass lock for each assembling component */
+  assemblySnap({ kind = 'shell', weight = 1, pan = 0, index = 0, total = 1 } = {}) {
+    if (!this.started || this.muted) return;
+    this._resume();
+    const c = this.ctx;
+    if (c.state !== 'running') return;
+
+    const at = c.currentTime;
+    const profiles = {
+      structure: { body: 245, click: 1450, decay: 0.065, gain: 0.034 },
+      shell: { body: 355, click: 2150, decay: 0.06, gain: 0.026 },
+      optic: { body: 510, click: 3050, decay: 0.07, gain: 0.031 },
+      jade: { body: 620, click: 3550, decay: 0.075, gain: 0.029 },
+      final: { body: 185, click: 1850, decay: 0.11, gain: 0.045 },
+    };
+    const profile = profiles[kind] || profiles.shell;
+    const drift = 1 + ((((index * 17) % 9) - 4) * 0.008);
+    const peak = Math.min(0.052, profile.gain * weight);
+    const output = typeof c.createStereoPanner === 'function' ? c.createStereoPanner() : c.createGain();
+    if ('pan' in output) output.pan.setValueAtTime(Math.max(-0.45, Math.min(0.45, pan)), at);
+    output.connect(this.assemblyBus || this.master);
+
+    // A short, low mechanical body replaces the previous ascending musical ping.
+    const body = c.createOscillator();
+    body.type = 'triangle';
+    body.frequency.setValueAtTime(profile.body * drift * 1.12, at);
+    body.frequency.exponentialRampToValueAtTime(profile.body * drift, at + 0.032);
+    const bodyGain = c.createGain();
+    this._env(bodyGain, peak, 0.0018, profile.decay, at);
+    body.connect(bodyGain).connect(output);
+    body.start(at);
+    body.stop(at + (kind === 'final' ? 0.2 : profile.decay + 0.045));
+
+    // A tightly filtered steel transient gives each lock a dry, precise edge.
+    const click = c.createBufferSource();
+    click.buffer = this._assemblyNoise || (this._assemblyNoise = this._noiseBuffer(0.18));
+    const clickFilter = c.createBiquadFilter();
+    clickFilter.type = 'bandpass';
+    clickFilter.frequency.setValueAtTime(profile.click * drift, at);
+    clickFilter.Q.value = kind === 'structure' ? 2.8 : 4.4;
+    const clickGain = c.createGain();
+    this._env(clickGain, peak * 0.92, 0.001, kind === 'final' ? 0.058 : 0.038, at);
+    click.connect(clickFilter).connect(clickGain).connect(output);
+    click.start(at);
+
+    if (kind === 'final') {
+      this._lastAssemblyFinal = at;
+      const lock = c.createOscillator();
+      lock.type = 'sine';
+      lock.frequency.setValueAtTime(240, at);
+      lock.frequency.exponentialRampToValueAtTime(145, at + 0.12);
+      const lockGain = c.createGain();
+      this._env(lockGain, 0.032, 0.0025, 0.13, at);
+      lock.connect(lockGain).connect(output);
+      lock.start(at);
+      lock.stop(at + 0.18);
+    }
+    body.onended = () => {
+      try { output.disconnect(); } catch {}
+    };
   }
 
   /* magnetic N52 snap — heavy, satisfying */
@@ -121,6 +195,7 @@ export class AudioEngine {
     if (!this.started || this.muted) return;
     this._resume();
     const c = this.ctx;
+    if (c.currentTime - this._lastAssemblyFinal < 0.28) return;
     const o = c.createOscillator();
     o.type = 'sine';
     o.frequency.setValueAtTime(74, c.currentTime);
